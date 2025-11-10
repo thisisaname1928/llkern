@@ -1,0 +1,8 @@
+-I
+./kernel
+-m32 
+-ffreestanding 
+-O2 
+-Wall 
+-Wextra 
+-fno-exceptions
