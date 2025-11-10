@@ -1,3 +1,4 @@
 *.o
 llkern
 test.iso
+log.txt
