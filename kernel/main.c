@@ -22,8 +22,6 @@ int main() {
 
   printStr((char *)&hdr->name);
   newline();
-  printHex(KERNEL_CS);
-  newline();
 
   memmap = findMultiboot2Tag(MULTIBOOT2_MEMORY_MAP_TAG);
   multiboot2MemoryMapEntry *entry = memmap->entries;
@@ -31,14 +29,7 @@ int main() {
   multiboot2ImageLoadPhysAddr *physAddrTag =
       findMultiboot2Tag(MULTIBOOT2_IMAGE_LOAD_PHYS_ADDR_TAG);
 
-  printStr("Base Addr:  ");
-  printHex(physAddrTag->loadBaseAddr);
-  newline();
-
-  printStr("kernel end: ");
-  printHex((uint32_t)kernelEndAddr);
-  newline();
-
+  // loop to calculate neccessary value
   while ((uint32_t)entry < (uint32_t)memmap + memmap->size) {
     if (entry->type == MULTIBOOT2_MEMORY_AVAILABLE) {
       availableMemory += entry->length;
@@ -56,6 +47,26 @@ int main() {
       entry->baseAddr = (uint32_t)kernelEndAddr;
     }
 
+    entry = (void *)((uint32_t)entry + memmap->entrySize);
+  }
+
+  printStr("Base Addr:  ");
+  printHex(physAddrTag->loadBaseAddr);
+  newline();
+
+  printStr("kernel end: ");
+  printHex((uint32_t)kernelEndAddr);
+  newline();
+
+  printStr("Available memory: ");
+  printUint(availableMemory);
+  newline();
+
+  initPageAllocator();
+
+  entry = memmap->entries;
+  while ((uint32_t)entry < (uint32_t)memmap + memmap->size) {
+
     printStr("Base addr: 0x");
     printHex(entry->baseAddr);
     printStr(" length = ");
@@ -67,21 +78,20 @@ int main() {
     entry = (void *)((uint32_t)entry + memmap->entrySize);
   }
 
-  printStr("Available memory: ");
-  printUint(availableMemory);
-  newline();
-
-  initPageAllocator();
-
-  void *a1 = allocPages(1);
-  void *a2 = allocPages(4);
-  // freePages(a2);
-  void *a3 = allocPages(1);
-  printHex((uint32_t)a1);
-  newline();
-  printHex((uint32_t)a2);
-  newline();
-  printHex((uint32_t)a3);
-  newline();
+  void *a, *b, *c;
+  a = allocPages(1);
+  b = allocPages(1);
+  c = allocPages(3);
+  printStr(" a = ");
+  printHex((uint32_t)a);
+  printStr(" b = ");
+  printHex((uint32_t)b);
+  printStr(" c = ");
+  printHex((uint32_t)c);
+  freePages(a);
+  freePages(b);
+  a = allocPages(1);
+  printStr(" a = ");
+  printHex((uint32_t)a);
   return 0;
 }

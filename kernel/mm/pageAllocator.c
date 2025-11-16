@@ -3,12 +3,14 @@
 #include <multiboot2/multiboot2.h>
 #include <stdint.h>
 #include <utils/math.h>
+#include <utils/mem/mem.h>
 
 // index as address (index * 4096), store information about how long the memory
 // map is
 // msb bit for free or non free pages
 int32_t *freePagesList;
 multiboot2MemoryMapEntry highestFreeEntry;
+uint32_t freePagesListEnd = 0;
 
 // return 1 if success, otherwise return 0
 int initPageAllocator() {
@@ -30,6 +32,13 @@ int initPageAllocator() {
   // init freePagesList
   printStr("init pages list...\n");
   freePagesList = (void *)kernelEndAddr; // place at end of the kernel
+  freePagesListEnd = align(
+      (uint32_t)freePagesList +
+          ((highestFreeEntry.baseAddr + highestFreeEntry.length) / 4096) * 4,
+      4096);
+  printStr("Free pages list end: ");
+  printHex(freePagesListEnd);
+  newline();
 
   // detect free pages
   printStr("detect free pages...\n");
@@ -38,6 +47,13 @@ int initPageAllocator() {
   while ((uint32_t)entry < (uint32_t)memmap + memmap->size) {
     if (entry->baseAddr > highestFreeEntry.baseAddr) {
       break;
+    }
+
+    // modify entry that free pages list in to preserve freePagesList
+    if (entry->baseAddr == (uint32_t)freePagesList) {
+      entry->baseAddr = freePagesListEnd;
+      entry->length =
+          entry->length - (freePagesListEnd - (uint32_t)(freePagesList));
     }
 
     // update lastNonFreeEntry
@@ -93,9 +109,8 @@ void *simpleAlloc(int32_t n) {
   uint32_t baseAddr = 0;
   while (baseAddr <= highestFreeEntry.baseAddr + highestFreeEntry.length) {
 
-    if (freePagesList[baseAddr / 4096] < 0) {
+    if (freePagesList[baseAddr / 4096] < n) {
       baseAddr += abs(freePagesList[baseAddr / 4096]) * 4096;
-
     } else {
       // found free block
       if (freePagesList[baseAddr / 4096] > n) {
@@ -103,16 +118,11 @@ void *simpleAlloc(int32_t n) {
         freePagesList[baseAddr / 4096 + n] =
             freePagesList[baseAddr / 4096] - n; // free
         freePagesList[baseAddr / 4096] = -n;    // non free
-        printStr("DEB: ");
-        printHex(baseAddr);
-        newline();
 
         return (void *)baseAddr;
       } else if (freePagesList[baseAddr / 4096] == n) {
         freePagesList[baseAddr / 4096] = -n;
         return (void *)baseAddr;
-      } else {
-        baseAddr += freePagesList[baseAddr / 4096] * 4096;
       }
     }
   }
@@ -120,15 +130,34 @@ void *simpleAlloc(int32_t n) {
   return 0;
 }
 
+void simpleAllocMerge(uint32_t maxPtr) {
+  uint32_t baseAddr = freePagesListEnd;
+  while (baseAddr < maxPtr) {
+    // check if both this block and next block are free
+    if (freePagesList[baseAddr / 4096] > 0) {
+      if (freePagesList[baseAddr / 4096 + abs(freePagesList[baseAddr / 4096])] >
+          0) {
+        // merge
+        freePagesList[baseAddr / 4096] += freePagesList[baseAddr / 4096];
+      }
+    }
+
+    // inc
+    baseAddr += abs(freePagesList[baseAddr / 4096]) * 4096;
+  }
+}
+
 void simpleDealloc(void *ptr) {
   uint32_t baseAddr = (uint32_t)ptr;
-  uint32_t nPages = freePagesList[baseAddr / 4096];
+  uint32_t nPages = abs(freePagesList[baseAddr / 4096]);
   freePagesList[baseAddr / 4096] = abs(freePagesList[baseAddr / 4096]);
 
   // check if next block is free
   if (freePagesList[baseAddr / 4096 + nPages] > 0) {
     freePagesList[baseAddr / 4096] += freePagesList[baseAddr / 4096 + nPages];
   }
+
+  simpleAllocMerge((uint32_t)ptr);
 }
 
 void *allocPages(int32_t n) { return simpleAlloc(n); }
