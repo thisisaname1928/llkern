@@ -11,6 +11,17 @@ multiboot2MemoryMapTag *memmap;
 uint32_t availableMemory = 0;
 uint32_t kernelEndAddr;
 
+void initKernel() {
+#define TMP_BUFFER_SZ 4096
+  TmpMemAllocator allocator;
+  char stackBuffer[TMP_BUFFER_SZ];
+  initTmpMemAllocator(&allocator, stackBuffer, TMP_BUFFER_SZ);
+  curTmpMemAllocator = &allocator;
+
+  // end
+  curTmpMemAllocator = NULL;
+}
+
 int main() {
   initIDT32();
 
@@ -47,6 +58,14 @@ int main() {
       entry->baseAddr = (uint32_t)kernelEndAddr;
     }
 
+    printStr("Addr: ");
+    printHex(entry->baseAddr);
+    printStr(", Type=");
+    printUint(entry->type);
+    printStr(", Length=");
+    printUint(entry->length);
+    newline();
+
     entry = (void *)((uint32_t)entry + memmap->entrySize);
   }
 
@@ -62,36 +81,7 @@ int main() {
   printUint(availableMemory);
   newline();
 
-  initPageAllocator();
+  initKernel();
 
-  entry = memmap->entries;
-  while ((uint32_t)entry < (uint32_t)memmap + memmap->size) {
-
-    printStr("Base addr: 0x");
-    printHex(entry->baseAddr);
-    printStr(" length = ");
-    printUint(entry->length);
-    printStr(" type = ");
-    printUint(entry->type);
-    newline();
-
-    entry = (void *)((uint32_t)entry + memmap->entrySize);
-  }
-
-  void *a, *b, *c;
-  a = allocPages(1);
-  b = allocPages(1);
-  c = allocPages(3);
-  printStr(" a = ");
-  printHex((uint32_t)a);
-  printStr(" b = ");
-  printHex((uint32_t)b);
-  printStr(" c = ");
-  printHex((uint32_t)c);
-  freePages(a);
-  freePages(b);
-  a = allocPages(1);
-  printStr(" a = ");
-  printHex((uint32_t)a);
   return 0;
 }

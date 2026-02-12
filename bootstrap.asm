@@ -121,5 +121,5 @@ GDT32:
 
 section .bss
 stackTop:
-    resb 4096*4
+    resb 4096*16
 stackBot:
