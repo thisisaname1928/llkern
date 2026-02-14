@@ -18,6 +18,8 @@ void initKernel() {
   initTmpMemAllocator(&allocator, stackBuffer, TMP_BUFFER_SZ);
   curTmpMemAllocator = &allocator;
 
+  initBuddyAllocator();
+
   // end
   curTmpMemAllocator = NULL;
 }
@@ -81,7 +83,10 @@ int main() {
   printUint(availableMemory);
   newline();
 
-  initKernel();
+  // initKernel();
+
+  kprintf("%u ok? str: %s hex:%x\n", (uint32_t)1012, "hi",
+          (uint32_t)0xdeadbeef);
 
   return 0;
 }

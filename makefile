@@ -12,6 +12,9 @@ KERNEL_OUTPUT=llkern
 run: $(OUTPUT)
 	@qemu-system-x86_64 -cdrom $< -m 3G -no-reboot -D ./log.txt -monitor stdio
 
+runKVM: $(OUTPUT)
+	@qemu-system-x86_64 -cdrom $< -m 3G -no-reboot -D ./log.txt -monitor stdio -enable-kvm
+
 $(OUTPUT): $(KERNEL_OUTPUT)
 	@cp $< iso/boot/
 	@grub-mkrescue /usr/lib/grub/i386-pc -o $@ iso

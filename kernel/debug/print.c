@@ -1,3 +1,4 @@
+
 #include <stdint.h>
 #include <utils/mem/mem.h>
 
@@ -24,6 +25,11 @@ void newline() {
 }
 
 void putchar(int c) {
+  if (c == '\n') {
+    newline();
+    return;
+  }
+
   buffer[y * MAX_WIDTH + x] = ((color & 0xff) << 8) | (c & 0xff);
 
   // inc x y
@@ -86,4 +92,44 @@ void printHex(uint32_t n) {
   }
 
   printStr(&buff[c + 1]);
+}
+
+void kprintf(const char *str, ...) {
+  __builtin_va_list argsList;
+
+  __builtin_va_start(argsList, str);
+  uint32_t idx = 0;
+  while (str[idx] != 0) {
+    switch (str[idx]) {
+    case '%':
+      switch (str[idx + 1]) {
+      case 'u':;
+        uint32_t res = __builtin_va_arg(argsList, uint32_t);
+        printUint(res);
+        break;
+      case 's':;
+        char *sres = __builtin_va_arg(argsList, char *);
+        if (sres != NULL) {
+          printStr(sres);
+        }
+        break;
+      case 'x':;
+        res = __builtin_va_arg(argsList, uint32_t);
+        printHex(res);
+        break;
+      default:
+        putchar('%');
+        putchar(str[idx + 1]);
+        break;
+      }
+      idx += 2;
+      break;
+    default:
+      putchar(str[idx]);
+      idx++;
+      break;
+    }
+  }
+
+  __builtin_va_end(argsList);
 }

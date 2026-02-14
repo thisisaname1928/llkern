@@ -21,4 +21,6 @@ void freePages(void *ptr);
 
 extern int32_t *freePagesList;
 
+void initBuddyAllocator();
+
 #endif

@@ -40,3 +40,5 @@ int memcmp(const void *ptr1, const void *ptr2, size_t num) {
 uint32_t align(uint32_t addr, uint32_t boundary) {
   return (addr + (boundary - 1)) & (~(boundary - 1));
 }
+
+bool isPowerOfTwo(uint32_t n) { return (n > 0) && ((n & (n - 1)) == 0); }
