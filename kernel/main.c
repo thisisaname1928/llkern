@@ -1,8 +1,10 @@
 #include "arch/interrupts/IDT.h"
 #include "bootstrap.h"
 #include "multiboot2/multiboot2.h"
+#include <arch/io.h>
 #include <debug/print.h>
 #include <mm/mm.h>
+#include <mm/slab.h>
 #include <stdint.h>
 #include <utils/math.h>
 #include <utils/mem/mem.h>
@@ -10,6 +12,8 @@
 multiboot2MemoryMapTag *memmap;
 uint32_t availableMemory = 0;
 uint32_t kernelEndAddr;
+uint32_t metadataSz; // in 4KB page
+void *metadataPtr = NULL;
 
 void initKernel() {
 #define TMP_BUFFER_SZ 4096
@@ -60,15 +64,30 @@ int main() {
       entry->baseAddr = (uint32_t)kernelEndAddr;
     }
 
-    printStr("Addr: ");
-    printHex(entry->baseAddr);
-    printStr(", Type=");
-    printUint(entry->type);
-    printStr(", Length=");
-    printUint(entry->length);
-    newline();
+    entry = (void *)((uint32_t)entry + memmap->entrySize);
+  }
+
+  // kernel will get 0.5% of available pages for page allocator data
+  metadataSz = (uint32_t)(availableMemory / 4096) * (0.5 / 100);
+  kprintf("use %u pages for metadata storing\n", metadataSz);
+
+  // modify the memmap
+  entry = memmap->entries;
+  while ((uint32_t)entry < (uint32_t)memmap + memmap->size) {
+    if (entry->type == MULTIBOOT2_MEMORY_AVAILABLE &&
+        entry->length > metadataSz * 4096) {
+      // ok
+      metadataPtr = (void *)entry->baseAddr;
+
+      entry->baseAddr += entry->baseAddr;
+      entry->length -= metadataSz * 4096;
+    }
 
     entry = (void *)((uint32_t)entry + memmap->entrySize);
+  }
+
+  if (metadataPtr == NULL) {
+    return -1;
   }
 
   printStr("Base Addr:  ");
@@ -83,10 +102,15 @@ int main() {
   printUint(availableMemory);
   newline();
 
-  // initKernel();
+  SlabBlockHeader *metadataMem = metadataPtr;
+  initNewSlabBLock(metadataMem, metadataSz * 4096);
 
-  kprintf("%u ok? str: %s hex:%x\n", (uint32_t)1012, "hi",
-          (uint32_t)0xdeadbeef);
+  void *a = slabAlloc(metadataMem, 4);
+  kprintf("---------------------------------\n");
+  void *b = slabAlloc(metadataMem, 4);
+
+  kprintf("blockSz = %u, a = %u, b = %u\n", metadataMem->blockSz, a, b);
+  // initKernel();
 
   return 0;
 }

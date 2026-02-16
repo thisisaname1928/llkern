@@ -23,6 +23,7 @@ void initBuddyAllocator() {
     if (entry->type == MULTIBOOT2_MEMORY_AVAILABLE) {
       uint32_t curBlockSz = entry->length / 4096;
 
+      kprintf("pages: %u\n", curBlockSz);
       while (curBlockSz > 0) {
         printStr("Divide into: ");
 

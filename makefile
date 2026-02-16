@@ -10,10 +10,10 @@ OUTPUT=test.iso
 KERNEL_OUTPUT=llkern
 
 run: $(OUTPUT)
-	@qemu-system-x86_64 -cdrom $< -m 3G -no-reboot -D ./log.txt -monitor stdio
-
+	@qemu-system-x86_64 -cdrom $< -m 3G -no-reboot -D ./log.txt -serial stdio 
+ 
 runKVM: $(OUTPUT)
-	@qemu-system-x86_64 -cdrom $< -m 3G -no-reboot -D ./log.txt -monitor stdio -enable-kvm
+	@qemu-system-x86_64 -cdrom $< -m 3G -no-reboot -D ./log.txt -enable-kvm -serial stdio 
 
 $(OUTPUT): $(KERNEL_OUTPUT)
 	@cp $< iso/boot/

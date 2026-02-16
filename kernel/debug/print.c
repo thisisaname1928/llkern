@@ -1,4 +1,5 @@
 
+#include <arch/io.h>
 #include <stdint.h>
 #include <utils/mem/mem.h>
 
@@ -25,11 +26,15 @@ void newline() {
 }
 
 void putchar(int c) {
+
   if (c == '\n') {
+    outb(0x3f8, '\r');
+    outb(0x3f8, '\n');
     newline();
     return;
   }
 
+  outb(0x3f8, c);
   buffer[y * MAX_WIDTH + x] = ((color & 0xff) << 8) | (c & 0xff);
 
   // inc x y
@@ -42,9 +47,11 @@ void putchar(int c) {
 void printStr(const char *str) {
   while (*str != 0) {
 
-    if (*str == '\n')
+    if (*str == '\n') {
+      outb(0x3f8, '\r');
+      outb(0x3f8, '\n');
       newline();
-    else if (*str == '\r')
+    } else if (*str == '\r')
       x = 0;
     else
       putchar(*str);
@@ -73,7 +80,7 @@ void printUint(uint32_t n) {
 }
 
 const char hexTrans[] = {'0', '1', '2', '3', '4', '5', '6', '7',
-                         '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+                         '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
 void printHex(uint32_t n) {
   if (n == 0) {
